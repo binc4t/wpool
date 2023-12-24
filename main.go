@@ -7,14 +7,19 @@ import (
 	"github.com/binc4t/playground/wpool/wpool"
 )
 
-func Print(str string) func() {
+func Sleep(name string, t time.Duration) func() {
 	return func() {
-		fmt.Println(str)
+		time.Sleep(t)
+		fmt.Printf("%s sleep %s done\n", name, t)
 	}
 }
 
 func main() {
-	wpool.Run(Print("task 1"))
-	wpool.Run(Print("task 2"))
+	wpool.Run(Sleep("task 1", time.Second))
+	fmt.Println("add task 1, now worker count: ", wpool.DefaultPool.WorkerCount())
+
+	wpool.Run(Sleep("task 2", time.Second))
+	fmt.Println("add task 2, now worker count: ", wpool.DefaultPool.WorkerCount())
+
 	time.Sleep(time.Second * 3)
 }

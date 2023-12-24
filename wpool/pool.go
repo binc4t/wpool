@@ -25,6 +25,7 @@ type WPool interface {
 	Run(func())
 	RunWithCtx(context.Context, func())
 	SetPanicHandler(func(context.Context, any))
+	WorkerCount() int32
 }
 
 type defaultPool struct {
@@ -53,6 +54,7 @@ func (p *defaultPool) Run(f func()) {
 
 func (p *defaultPool) RunWithCtx(ctx context.Context, f func()) {
 	t := taskPool.Get().(*task)
+	t.ctx = ctx
 	t.f = f
 
 	p.mux.Lock()
@@ -66,7 +68,7 @@ func (p *defaultPool) RunWithCtx(ctx context.Context, f func()) {
 	p.taskCount.Add(1)
 	p.mux.Unlock()
 
-	if (p.taskCount.Load() > p.scaleThreshold && p.workerCount.Load() < p.cap) || p.workerCount.Load() == 0 {
+	if (p.taskCount.Load() >= p.scaleThreshold && p.workerCount.Load() < p.cap) || p.workerCount.Load() == 0 {
 		w := workerPool.Get().(*worker)
 		w.p = p
 		w.Run()
@@ -76,6 +78,10 @@ func (p *defaultPool) RunWithCtx(ctx context.Context, f func()) {
 
 func (p *defaultPool) SetPanicHandler(handler func(context.Context, any)) {
 	p.panicHandler = handler
+}
+
+func (p *defaultPool) WorkerCount() int32 {
+	return p.workerCount.Load()
 }
 
 func Run(f func()) {

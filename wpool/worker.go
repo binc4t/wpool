@@ -29,16 +29,15 @@ func (w *worker) Run() {
 				t = w.p.taskHead
 				w.p.taskHead = w.p.taskHead.next
 			}
+			w.p.mux.Unlock()
 
 			if t == nil {
-				w.Recycle()
 				w.p.workerCount.Add(-1)
-				w.p.mux.Unlock()
+				w.Recycle()
 				return
 			}
 
 			w.p.taskCount.Add(-1)
-			w.p.mux.Unlock()
 
 			func() {
 				defer func() {
@@ -52,11 +51,12 @@ func (w *worker) Run() {
 				}()
 				t.f()
 			}()
-
+			t.Recycle()
 		}
 	}()
 }
 
 func (w *worker) Recycle() {
+	w.p = nil
 	workerPool.Put(w)
 }
